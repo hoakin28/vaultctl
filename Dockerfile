@@ -13,5 +13,5 @@ RUN pip3 install ete3 && \
 WORKDIR crawler
 
 ADD . /crawler
-RUN chmod +x vault_cr
+RUN chmod +x vault_crawler.py
 CMD ["/bin/bash"]
