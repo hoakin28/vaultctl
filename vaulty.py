@@ -18,6 +18,7 @@ def read_args():
     parser.add_argument("-s", "--show", help="Show root mounts", action='store_true')
     parser.add_argument("-f", "--find", help="Find a secret containing key word")
     parser.add_argument("-p", "--path", help="Find a secret in a specific path", type=validate_path)
+    parser.add_argument("-u", "--user", help="Write secrets for specified user")
     parser.add_argument("-t", "--tree", help="Root path from where to show the tree", type=validate_path)
     parser.add_argument("-l", "--list", help="Root path from where to show the list", type=validate_path)
     parser.add_argument("-g", "--get", help="Get secret", type=validate_secret)
