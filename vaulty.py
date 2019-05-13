@@ -17,6 +17,7 @@ def read_args():
     parser.add_argument("--r", "--recursive", help="Delete recursively", action='store_true')
     parser.add_argument("-s", "--show", help="Show root mounts", action='store_true')
     parser.add_argument("-f", "--find", help="Find a secret containing key word")
+    parser.add_argument("-p", "--path", help="Find a secret in a specific path", type=validate_path)
     parser.add_argument("-t", "--tree", help="Root path from where to show the tree", type=validate_path)
     parser.add_argument("-l", "--list", help="Root path from where to show the list", type=validate_path)
     parser.add_argument("-g", "--get", help="Get secret", type=validate_secret)
@@ -193,7 +194,7 @@ def delete_secret(path, **flag):
 
 def read_secret(secret):
         secrets = query_path("GET", secret)
-        print("Getting values for: " + secret)
+        print("Getting values for --> " + secret)
         if secrets is not None:
             return secrets
 
@@ -209,7 +210,8 @@ def search(path, search_data, row):
                 string = path + item
                 search(string, search_data, row)
                 if re.search(search_data, string, re.IGNORECASE):
-                    print("Found: " + string)
+                    if not re.search("\w+\/$", string, re.IGNORECASE):
+                        print("Found: " + string)
 
 def read_file(file_path):
     tmp = {}
@@ -219,7 +221,7 @@ def read_file(file_path):
     except IOError as error:
         print(error)
     for line in data:
-        if re.match(r"[\w\d \-_\.]+:[\w\d \-_=\.\?\\\/\$%\^\+]+", line):
+        if re.match(r"[\w\d \-_\.]+:[\w\d \-_=\.\?\\\/\$%\^\+@]+", line):
             tmp[line.split(":")[0]] = line.split(":")[1].strip("\n")
     return tmp
 
@@ -227,14 +229,14 @@ if __name__ == '__main__':
     tmp = []
     row = []
     args = read_args()
-    mounts = obtain_root_mounts()
-    for key in mounts.keys():
-        result = query_path("LIST", key)
-        if result is not None:
-            tmp.append(key)
-    mount_list = sorted(tmp)
 
     if args.show:
+        mounts = obtain_root_mounts()
+        for key in mounts.keys():
+            result = query_path("LIST", key)
+            if result is not None:
+                tmp.append(key)
+        mount_list = sorted(tmp)
         for i in mount_list:
             print(i)
 
@@ -250,9 +252,19 @@ if __name__ == '__main__':
                 print(i)
 
     if args.find:
-        print("Searching, please wait... ")
-        for i in mount_list:
-             search(i, args.find, row)
+        if args.path:
+            print("Searching " + args.path + ", please wait... ")
+            search(args.path, args.find, row)
+        else:
+            print("Searching everywhere, please wait... ")
+            mounts = obtain_root_mounts()
+            for key in mounts.keys():
+                result = query_path("LIST", key)
+                if result is not None:
+                    tmp.append(key)
+            mount_list = sorted(tmp)
+            for i in mount_list:
+                 search(i, args.find, row)
 
     if args.delete:
         if args.r and args.force:
@@ -268,7 +280,10 @@ if __name__ == '__main__':
         secrets = read_secret(args.get)
         if secrets is not None:
             for key, value in secrets['data'].items():
-                print(key + ":" + value)
+                if isinstance(value, str):
+                    print(key + ":" + value)
+                else:
+                    print(secrets)
         else:
             print("Value " + args.get + " not found")
 
