@@ -12,16 +12,15 @@ def read_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", help="Enter vault's url", type=validate_url)
     parser.add_argument("--token", help="Enter vault's token", type=validate_token)
-    parser.add_argument("--policy", help="Specify to do something with policies EX: --policy -d", action='store_true')
+    parser.add_argument("--policy", help="Specify to do something with policies [-d, -s, -g, -w ] EX: --policy -d", action='store_true')
     parser.add_argument("--rule", help="Specify path to apply acl, if more than 1 separated by ,")
     parser.add_argument("--acl", help="Specify acl separated with : EX: read:write,read:list")
     parser.add_argument("-d", "--delete", help="Delete a secret/policy")
     parser.add_argument("--force", help="Delete a secret without prompting for confirmation", action='store_true')
     parser.add_argument("--r", "--recursive", help="Delete recursively", action='store_true')
-    parser.add_argument("-s", "--show", help="Show root mounts", action='store_true')
+    parser.add_argument("-s", "--show", help="Show root mounts, use --policy to list policies", action='store_true')
     parser.add_argument("-f", "--find", help="Find a secret/policy containing keyword")
-    parser.add_argument("-p", "--path", help="Specify path for policies or searching", type=validate_path)
-    parser.add_argument("-n", "--name", help="Policy name")
+    parser.add_argument("-p", "--path", help="Specify path for searching", type=validate_path)
     parser.add_argument("-t", "--tree", help="Root path from where to show the tree", type=validate_path)
     parser.add_argument("-l", "--list", help="Root path from where to show the list", type=validate_path)
     parser.add_argument("-g", "--get", help="Get secret/policy", type=validate_secret)
@@ -106,7 +105,7 @@ def query_path(method_type, path, **data):
 
     session = requests.Session()
     session.headers.update({"X-Vault-Token": token})
-    vault_response = session.request(method_type, url + "/v1/" + path, json=payload, verify=False)
+    vault_response = session.request(method_type, f'{url}/v1/{path}', json=payload, verify=False)
     if vault_response.status_code == 200:
         return json.loads(vault_response.content.decode('utf-8'))
     elif vault_response.status_code == 204:
@@ -232,14 +231,19 @@ if __name__ == '__main__':
     args = read_args()
 
     if args.show:
-        mounts = obtain_root_mounts()
-        for key in mounts.keys():
-            result = query_path("LIST", key)
-            if result is not None:
-                tmp.append(key)
-        mount_list = sorted(tmp)
-        for i in mount_list:
-            print(i)
+        if args.policy:
+            policies = query_path("LIST", "sys/policy")
+            for value in policies['data']['policies']:
+                print(value)
+        else:
+            mounts = obtain_root_mounts()
+            for key in mounts.keys():
+                result = query_path("LIST", key)
+                if result is not None:
+                    tmp.append(key)
+            mount_list = sorted(tmp)
+            for i in mount_list:
+                print(i)
 
 
     if args.tree or args.list:
@@ -251,6 +255,7 @@ if __name__ == '__main__':
             tree, row1 = explore(args.list, Tree("{};".format(args.list)), row)
             for i in row1:
                 print(i)
+
 
     if args.find:
         if args.path:
