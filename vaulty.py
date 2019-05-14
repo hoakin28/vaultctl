@@ -12,16 +12,19 @@ def read_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", help="Enter vault's url", type=validate_url)
     parser.add_argument("--token", help="Enter vault's token", type=validate_token)
-    parser.add_argument("-d", "--delete", help="Delete a secret")
+    parser.add_argument("--policy", help="Specify to do something with policies EX: --policy -d", action='store_true')
+    parser.add_argument("--rule", help="Specify path to apply acl, if more than 1 separated by ,")
+    parser.add_argument("--acl", help="Specify acl separated with : EX: read:write,read:list")
+    parser.add_argument("-d", "--delete", help="Delete a secret/policy")
     parser.add_argument("--force", help="Delete a secret without prompting for confirmation", action='store_true')
     parser.add_argument("--r", "--recursive", help="Delete recursively", action='store_true')
     parser.add_argument("-s", "--show", help="Show root mounts", action='store_true')
-    parser.add_argument("-f", "--find", help="Find a secret containing key word")
-    parser.add_argument("-p", "--path", help="Find a secret in a specific path", type=validate_path)
-    parser.add_argument("-u", "--user", help="Write secrets for specified user")
+    parser.add_argument("-f", "--find", help="Find a secret/policy containing keyword")
+    parser.add_argument("-p", "--path", help="Specify path for policies or searching", type=validate_path)
+    parser.add_argument("-n", "--name", help="Policy name")
     parser.add_argument("-t", "--tree", help="Root path from where to show the tree", type=validate_path)
     parser.add_argument("-l", "--list", help="Root path from where to show the list", type=validate_path)
-    parser.add_argument("-g", "--get", help="Get secret", type=validate_secret)
+    parser.add_argument("-g", "--get", help="Get secret/policy", type=validate_secret)
     parser.add_argument("-w", "--write" , help="Path to write secret, use --key key1,key2,key3 and --value value1,value2,value3", type=validate_secret)
     parser.add_argument("--key", help="Secret's name")
     parser.add_argument("--value", help="Secret's value")
@@ -73,9 +76,6 @@ def read_config():
     return config
 
 
-
-
-
 def query_path(method_type, path, **data):
     if args.url:
         url = args.url
@@ -103,6 +103,7 @@ def query_path(method_type, path, **data):
         payload = data["data"]
     else:
         payload = {None:None}
+
     session = requests.Session()
     session.headers.update({"X-Vault-Token": token})
     vault_response = session.request(method_type, url + "/v1/" + path, json=payload, verify=False)
@@ -195,7 +196,6 @@ def delete_secret(path, **flag):
 
 def read_secret(secret):
         secrets = query_path("GET", secret)
-        print("Getting values for --> " + secret)
         if secrets is not None:
             return secrets
 
@@ -269,16 +269,31 @@ if __name__ == '__main__':
 
     if args.delete:
         if args.r and args.force:
-            delete_secret(args.delete, flag=True, ask=False)
+            if args.policy:
+                delete_secret(os.path.join("sys/policy", args.delete), flag=True, ask=False)
+            else:
+                delete_secret(args.delete, flag=True, ask=False)
         elif args.r and not args.force:
-            delete_secret(args.delete, flag=True, ask=True)
+            if args.policy:
+                delete_secret(os.path.join("sys/policy", args.delete), flag=True, ask=True)
+            else:
+                delete_secret(args.delete, flag=True, ask=True)
         elif not args.r and args.force:
-            delete_secret(args.delete, flag=False, ask=False)
+            if args.policy:
+                delete_secret(os.path.join("sys/policy", args.delete), flag=False, ask=False)
+            else:
+                delete_secret(args.delete, flag=False, ask=False)
         elif not args.r and not args.force:
-            delete_secret(args.delete, flag=False, ask=True)
+            if args.policy:
+                delete_secret(os.path.join("sys/policy", args.delete), flag=False, ask=True)
+            else:
+                delete_secret(args.delete, flag=False, ask=True)
 
     if args.get:
-        secrets = read_secret(args.get)
+        if args.policy:
+            secrets = read_secret(os.path.join("sys/policy", args.get))
+        else:
+            secrets = read_secret(args.get)
         if secrets is not None:
             for key, value in secrets['data'].items():
                 if isinstance(value, str):
@@ -300,16 +315,27 @@ if __name__ == '__main__':
             os._exit(1)
 
     if args.write:
-        secrets={}
-        if args.key and args.value:
-            list_key = args.key.split(",")
-            list_value = args.value.split(",")
-            for i in range(len(list_key)):
-                secrets[list_key[i]] = list_value[i]
-            post_secret(secrets, args.write)
-        elif args.load:
-            json_file = read_file(args.load)
-            post_secret(json_file, args.write)
+        secrets= {}
+        rules = []
+        if args.policy:
+            uri = "sys/policy"
+            list_path = args.rule.split(",")
+            list_acl = args.acl.split(",")
+            for i in range(len(list_path)):
+                acl_string = re.sub(r'([a-zA-Z]+)',r'"\1"', list_acl[i]).replace(":",",")
+                rules.append(f'path "{list_path[i]}" {{capabilities = [{acl_string}]}}\n')
+            secrets["rules"] = "".join(rules)
+            post_secret(secrets, os.path.join(uri, args.write))
         else:
-            print("You need to use --key and --value or load a file")
-            os._exit(1)
+            if args.key and args.value:
+                list_key = args.key.split(",")
+                list_value = args.value.split(",")
+                for i in range(len(list_key)):
+                    secrets[list_key[i]] = list_value[i]
+                post_secret(secrets, args.write)
+            elif args.load:
+                json_file = read_file(args.load)
+                post_secret(json_file, args.write)
+            else:
+                print("You need to use --key and --value or load a file")
+                os._exit(1)
