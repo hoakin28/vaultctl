@@ -4,9 +4,11 @@ import argparse
 import re
 import json
 import os
+from sys import exit
 import configparser
 
 requests.packages.urllib3.disable_warnings()
+
 
 def read_args():
     parser = argparse.ArgumentParser()
@@ -27,7 +29,7 @@ def read_args():
     parser.add_argument("-w", "--write" , help="Path to write secret, use --key key1,key2,key3 and --value value1,value2,value3", type=validate_secret)
     parser.add_argument("--key", help="Secret's name")
     parser.add_argument("--value", help="Secret's value")
-    parser.add_argument("--load", help="Write secrets from file, file must be key:value format with extension .vaulty", type=validate_file)
+    parser.add_argument("--load", help="Write secrets from file, file must be key:value for secrets, for policies /path/../../* read:list format with extension .vaulty", type=validate_file)
     parser.add_argument("-c", "--copy" , help="Copy secrets, use --src and --dst", action='store_true')
     parser.add_argument("--src", help="Source secret to copy", type=validate_secret)
     parser.add_argument("--dst", help="Dest path to copy secret", type=validate_secret)
@@ -39,25 +41,30 @@ def validate_secret(arg, secret=re.compile(r"((?:^\w+\/?)(?:(?:\w+(?:[\.-]+)?\w+
         raise argparse.ArgumentTypeError("Invalid value, must not end or start with /, (cannot write secrets on mounts)")
     return arg
 
+
 def validate_path(arg, secret=re.compile(r"((?:^\w+\/?)(?:(?:\w+(?:[\.-]+)?\w+\/?)+)?(?:\/$))")):
     if not secret.match(arg):
         raise argparse.ArgumentTypeError("Invalid value, must not start with / and must end with /")
     return arg
+
 
 def validate_url(arg):
     if "https" not in arg:
         arg = "https://" + arg
     return arg
 
+
 def validate_token(arg, token=re.compile(r"(^\w{8}-(?:\w{4}-){3}\w{12}$)")):
     if not token.match(arg):
         raise argparse.ArgumentTypeError("Invalid token")
     return arg
 
-def validate_file(arg, file = re.compile(r".*\.vaulty")):
+
+def validate_file(arg, file=re.compile(r".*\.vaulty")):
     if not file.match(arg):
         raise argparse.ArgumentTypeError("File must end with .vaulty extension")
     return arg
+
 
 def read_config():
     config = configparser.ConfigParser()
@@ -68,10 +75,10 @@ def read_config():
                 config.read_file(config_file)
         except IOError as error:
             print(error)
-            os._exit(1)
+            exit(1)
     else:
         print("No config file found, please create one as /etc/vaulty.conf or use --url --token as arguments")
-        os._exit(1)
+        exit(1)
     return config
 
 
@@ -88,7 +95,7 @@ def query_path(method_type, path, **data):
         if not args.url:
             url_token = read_config()
             url = url_token["client"]["host"]
-            if not "https" in url:
+            if "https" not in url:
                 url = "https://" + url
         else:
             url = args.url
@@ -96,12 +103,12 @@ def query_path(method_type, path, **data):
         url_token = read_config()
         url = url_token["client"]["host"]
         token = url_token["client"]["token"]
-        if not "https" in url:
+        if "https" not in url:
             url = "https://" + url
     if data:
         payload = data["data"]
     else:
-        payload = {None:None}
+        payload = {None: None}
 
     session = requests.Session()
     session.headers.update({"X-Vault-Token": token})
@@ -111,7 +118,7 @@ def query_path(method_type, path, **data):
     elif vault_response.status_code == 204:
         if method_type == "POST":
             print("Operation successful")
-            os._exit(0)
+            exit(0)
         else:
             return vault_response.status_code
     elif vault_response.status_code == 500:
@@ -119,19 +126,22 @@ def query_path(method_type, path, **data):
         pass
     elif vault_response.status_code == 400:
         print("Malformed JSON body")
-        os._exit(1)
+        exit(1)
     elif vault_response.status_code == 403:
         print("Forbidden 403")
-        os._exit(1)
+        exit(1)
     elif vault_response.status_code == 503:
         print("Vault is down for maintenance or is currently sealed. Try again later")
-        os._exit(1)
+        exit(1)
     else:
         return None
 
+
 def obtain_root_mounts():
-    mounts = query_path("GET","sys/mounts")
-    return mounts
+
+    mount = query_path("GET", "sys/mounts")
+    return mount
+
 
 def explore(path, tree1, row):
     paths = query_path("LIST", path)
@@ -143,7 +153,8 @@ def explore(path, tree1, row):
                 explore(string, A, row)
                 if not re.search("\w+\/$", string, re.IGNORECASE):
                     row.append(string)
-    return tree1,row
+    return tree1, row
+
 
 def delete_secret(path, **flag):
     row = []
@@ -173,7 +184,7 @@ def delete_secret(path, **flag):
             else:
                 print("Delete unsuccessful with response code: " + str(secret))
         else:
-            os._exit(0)
+            exit(0)
     elif flag["flag"] is True and flag["ask"] is False:
         if re.search("\w+\/$", path, re.IGNORECASE):
             tree, row1 = explore(path, Tree("{};".format(path)), row)
@@ -198,6 +209,7 @@ def read_secret(secret):
         if secrets is not None:
             return secrets
 
+
 def post_secret(secrets, new_secret):
     query_path("POST", new_secret, data=secrets)
 
@@ -213,38 +225,35 @@ def search(path, search_data, row):
                     if not re.search("\w+\/$", string, re.IGNORECASE):
                         print("Found: " + string)
 
+
 def read_file(file_path):
-    tmp = {}
     try:
         with open(file_path) as secrets_file:
             data = secrets_file.readlines()
     except IOError as error:
         print(error)
-    for line in data:
-        if re.match(r"[\w\d \-_\.]+:[\w\d \-_=\.\?\\\/\$%\^\+@]+", line):
-            tmp[line.split(":")[0]] = line.split(":")[1].strip("\n")
-    return tmp
+        exit(1)
+    return data
+
 
 if __name__ == '__main__':
     tmp = []
     row = []
     args = read_args()
-
     if args.show:
         if args.policy:
             policies = query_path("LIST", "sys/policy")
             for value in policies['data']['policies']:
                 print(value)
         else:
-            mounts = obtain_root_mounts()
-            for key in mounts.keys():
+            mount = obtain_root_mounts()
+            for key in mount.keys():
                 result = query_path("LIST", key)
                 if result is not None:
                     tmp.append(key)
             mount_list = sorted(tmp)
             for i in mount_list:
                 print(i)
-
 
     if args.tree or args.list:
         print("Getting Data, please wait...\n")
@@ -256,21 +265,20 @@ if __name__ == '__main__':
             for i in row1:
                 print(i)
 
-
     if args.find:
         if args.path:
             print("Searching " + args.path + ", please wait... ")
             search(args.path, args.find, row)
         else:
             print("Searching everywhere, please wait... ")
-            mounts = obtain_root_mounts()
-            for key in mounts.keys():
+            mount = obtain_root_mounts()
+            for key in mount.keys():
                 result = query_path("LIST", key)
                 if result is not None:
                     tmp.append(key)
             mount_list = sorted(tmp)
             for i in mount_list:
-                 search(i, args.find, row)
+                search(i, args.find, row)
 
     if args.delete:
         if args.r and args.force:
@@ -310,22 +318,30 @@ if __name__ == '__main__':
 
     if args.copy:
         if args.src and args.dst:
-            tmp={}
+            tmp = {}
             secrets = read_secret(args.src)
             for key, value in secrets['data'].items():
                 tmp[key] = value
             post_secret(tmp, args.dst)
         else:
             print("You need to use --src and --dst")
-            os._exit(1)
+            exit(1)
 
     if args.write:
         secrets= {}
         rules = []
+        list_path = []
+        list_acl = []
         if args.policy:
             uri = "sys/policy"
-            list_path = args.rule.split(",")
-            list_acl = args.acl.split(",")
+            if args.acl and args.rule:
+                list_path = args.rule.split(",")
+                list_acl = args.acl.split(",")
+            elif args.load:
+                json_file = read_file(args.load)
+                for line in json_file:
+                    list_path.append(line.rstrip("\n").split(" ")[0])
+                    list_acl.append(line.rstrip("\n").split(" ")[1])
             for i in range(len(list_path)):
                 acl_string = re.sub(r'([a-zA-Z]+)',r'"\1"', list_acl[i]).replace(":",",")
                 rules.append(f'path "{list_path[i]}" {{capabilities = [{acl_string}]}}\n')
@@ -337,10 +353,12 @@ if __name__ == '__main__':
                 list_value = args.value.split(",")
                 for i in range(len(list_key)):
                     secrets[list_key[i]] = list_value[i]
-                post_secret(secrets, args.write)
             elif args.load:
                 json_file = read_file(args.load)
-                post_secret(json_file, args.write)
+                for line in json_file:
+                    if re.match(r"[\w\d \-_\.]+:[\w\d \-_=\.\?\\\/\$%\^\+@]+", line):
+                        secrets[line.split(":")[0]] = line.split(":")[1].strip("\n")
             else:
                 print("You need to use --key and --value or load a file")
-                os._exit(1)
+                exit(1)
+            post_secret(secrets, args.write)
