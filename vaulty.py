@@ -19,7 +19,7 @@ def read_args():
     parser.add_argument("--acl", help="Specify acl separated with : EX: read:write,read:list")
     parser.add_argument("-d", "--delete", help="Delete a secret/policy")
     parser.add_argument("--force", help="Delete a secret without prompting for confirmation", action='store_true')
-    parser.add_argument("--r", "--recursive", help="Delete recursively", action='store_true')
+    parser.add_argument("-r", "--recursive", help="Delete/copy recursively", action='store_true')
     parser.add_argument("-s", "--show", help="Show root mounts, use --policy to list policies", action='store_true')
     parser.add_argument("-f", "--find", help="Find a secret/policy containing keyword")
     parser.add_argument("-p", "--path", help="Specify path for searching", type=validate_path)
@@ -31,8 +31,8 @@ def read_args():
     parser.add_argument("--value", help="Secret's value")
     parser.add_argument("--load", help="Write secrets from file, file must be key:value for secrets, for policies /path/../../* read:list format with extension .vaulty", type=validate_file)
     parser.add_argument("-c", "--copy" , help="Copy secrets, use --src and --dst", action='store_true')
-    parser.add_argument("--src", help="Source secret to copy", type=validate_secret)
-    parser.add_argument("--dst", help="Dest path to copy secret", type=validate_secret)
+    parser.add_argument("--src", help="Source secret to copy if its a single secret must no end with /, if recursive end with /")
+    parser.add_argument("--dst", help="Dest path to copy secret if its a single secret must no end with /, if recursive end with /")
     return parser.parse_args()
 
 
@@ -118,7 +118,6 @@ def query_path(method_type, path, **data):
     elif vault_response.status_code == 204:
         if method_type == "POST":
             print("Operation successful")
-            exit(0)
         else:
             return vault_response.status_code
     elif vault_response.status_code == 500:
@@ -281,22 +280,22 @@ if __name__ == '__main__':
                 search(i, args.find, row)
 
     if args.delete:
-        if args.r and args.force:
+        if args.recursive and args.force:
             if args.policy:
                 delete_secret(os.path.join("sys/policy", args.delete), flag=True, ask=False)
             else:
                 delete_secret(args.delete, flag=True, ask=False)
-        elif args.r and not args.force:
+        elif args.recursive and not args.force:
             if args.policy:
                 delete_secret(os.path.join("sys/policy", args.delete), flag=True, ask=True)
             else:
                 delete_secret(args.delete, flag=True, ask=True)
-        elif not args.r and args.force:
+        elif not args.recursive and args.force:
             if args.policy:
                 delete_secret(os.path.join("sys/policy", args.delete), flag=False, ask=False)
             else:
                 delete_secret(args.delete, flag=False, ask=False)
-        elif not args.r and not args.force:
+        elif not args.recursive and not args.force:
             if args.policy:
                 delete_secret(os.path.join("sys/policy", args.delete), flag=False, ask=True)
             else:
@@ -317,12 +316,21 @@ if __name__ == '__main__':
             print("Value " + args.get + " not found")
 
     if args.copy:
+        tmp = {}
         if args.src and args.dst:
-            tmp = {}
-            secrets = read_secret(args.src)
-            for key, value in secrets['data'].items():
-                tmp[key] = value
-            post_secret(tmp, args.dst)
+            if args.recursive:
+                tree, row1 = explore(args.src, Tree("{};".format(args.src)), row)
+                for i in row1:
+                    secrets = read_secret(i)
+                    tmp_string = re.sub(args.src, args.dst, i)
+                    for key, value in secrets['data'].items():
+                        tmp[key] = value
+                    post_secret(tmp, tmp_string)
+            else:
+                secrets = read_secret(args.src)
+                for key, value in secrets['data'].items():
+                    tmp[key] = value
+                post_secret(tmp, args.dst)
         else:
             print("You need to use --src and --dst")
             exit(1)
