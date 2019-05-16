@@ -20,7 +20,9 @@ Operations supported by vaulty are:
 
 The binary works out of the box, it only needs --url (Vault's URL with port, Example: https://localhost:8200/, --token (it needs root token or one with enough privileges to traverse Vault's tree), alternatively there's a configuration file, read from /etc/vaulty.conf 
 
-[client]
+vaulty.conf
+
+\[client\]
 host = https://localhost:8200/
 token = \<ROOT TOKEN\>
 
