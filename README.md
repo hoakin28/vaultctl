@@ -4,7 +4,7 @@ It's a wrapper around Vault's  REST API, it let you do multiple operations with 
 
 The binary it's tested to work in CentOS7/RedHat7.5
 
-Operations supoorted by vaulty are:
+Operations supported by vaulty are:
 
 - List Vault paths as list or trees
 - Print secrets
@@ -19,8 +19,6 @@ Operations supoorted by vaulty are:
 - Load new policies from file
 
 The binary works out of the box, it only needs --url (Vault's URL with port, Example: https://localhost:8200/, --token (it needs root token or one with enough privileges to traverse Vault's tree), alternatively there's a configuration file, read from /etc/vaulty.conf 
-
-vaulty.conf
 
 [client]
 host = https://localhost:8200/
