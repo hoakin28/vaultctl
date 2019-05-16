@@ -22,9 +22,9 @@ The binary works out of the box, it only needs --url (Vault's URL with port, Exa
 
 vaulty.conf
 
-\[client\] 
-host = https://localhost:8200/ 
-token = \<ROOT TOKEN\> 
+\[client\]  
+host = https://localhost:8200/  
+token = \<ROOT TOKEN\>  
 
 
 USAGE EXAMPLE
@@ -99,11 +99,11 @@ Create a secret from file
 
 File format for policies 
 
-/path/to/secret read 
-/path/to/secrets/ read:list 
+/path/to/secret read  
+/path/to/secrets/ read:list  
 
 File format for secrets
 
-name:foo 
-lastname:bar 
+name:foo  
+lastname:bar  
 password:vaulty123 
