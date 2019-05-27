@@ -14,6 +14,9 @@ def read_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", help="Enter vault's url", type=validate_url)
     parser.add_argument("--token", help="Enter vault's token", type=validate_token)
+    parser.add_argument("--token-lookup", help="Return information about the token", type=validate_token)
+    parser.add_argument("--token-create", help="Create a token", type=validate_token)
+    parser.add_argument("--role-create", help="Create a token", type=validate_token)
     parser.add_argument("--policy", help="Specify to do something with policies [-d, -s, -g, -w ] EX: --policy -d", action='store_true')
     parser.add_argument("--rule", help="Specify path to apply acl, if more than 1 separated by ,")
     parser.add_argument("--acl", help="Specify acl separated with : EX: read:write,read:list")
@@ -33,6 +36,7 @@ def read_args():
     parser.add_argument("-c", "--copy" , help="Copy secrets, use --src and --dst", action='store_true')
     parser.add_argument("--src", help="Source secret to copy if its a single secret must no end with /, if recursive end with /")
     parser.add_argument("--dst", help="Dest path to copy secret if its a single secret must no end with /, if recursive end with /")
+    parser.add_argument("--version", help="Display Vaulty Version", action='store_true')
     return parser.parse_args()
 
 
@@ -64,6 +68,11 @@ def validate_file(arg, file=re.compile(r".*\.vaulty")):
     if not file.match(arg):
         raise argparse.ArgumentTypeError("File must end with .vaulty extension")
     return arg
+
+
+def version():
+    print("Vaulty v1.0.0")
+    exit(0)
 
 
 def read_config():
@@ -118,6 +127,7 @@ def query_path(method_type, path, **data):
     elif vault_response.status_code == 204:
         if method_type == "POST":
             print("Operation successful")
+            return json.loads(vault_response.content.decode('utf-8'))
         else:
             return vault_response.status_code
     elif vault_response.status_code == 500:
@@ -210,7 +220,8 @@ def read_secret(secret):
 
 
 def post_secret(secrets, new_secret):
-    query_path("POST", new_secret, data=secrets)
+    answer = query_path("POST", new_secret, data=secrets)
+    return answer
 
 
 def search(path, search_data, row):
@@ -315,6 +326,16 @@ if __name__ == '__main__':
         else:
             print("Value " + args.get + " not found")
 
+    if args.token_lookup:
+        payload = {}
+        payload["token"] = args.token_lookup
+        token_info = post_secret(payload, "auth/token/lookup")
+        if token_info is not None:
+            for key, value in token_info['data'].items():
+                if key == "accessor" or key == "id" or key == "policies" or key == "renewable" or key == "ttl":
+                    print(f"{key}:{value}")
+
+
     if args.copy:
         tmp = {}
         if args.src and args.dst:
@@ -370,3 +391,6 @@ if __name__ == '__main__':
                 print("You need to use --key and --value or load a file")
                 exit(1)
             post_secret(secrets, args.write)
+
+    if args.version:
+        version()
