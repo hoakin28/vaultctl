@@ -53,7 +53,7 @@ Search a secret with a keyword on a given path
 
 Create new secrets from command line
 
-~# vaulty -w path/to/secret --key name1,name2 --value foo,bar
+~# vaulty -w path/to/secret --key name1|name2 --value foo|bar
 
 Copy one secret to a new path 
 

@@ -29,7 +29,7 @@ def read_args():
     parser.add_argument("-t", "--tree", help="Root path from where to show the tree", type=validate_path)
     parser.add_argument("-l", "--list", help="Root path from where to show the list", type=validate_path)
     parser.add_argument("-g", "--get", help="Get secret/policy", type=validate_secret)
-    parser.add_argument("-w", "--write" , help="Path to write secret, use --key key1,key2,key3 and --value value1,value2,value3", type=validate_secret)
+    parser.add_argument("-w", "--write" , help="Path to write secret, use --key key1|key2|key3 and --value value1|value2|value3", type=validate_secret)
     parser.add_argument("--key", help="Secret's name")
     parser.add_argument("--value", help="Secret's value")
     parser.add_argument("--load", help="Write secrets from file, file must be key:value for secrets, for policies /path/../../* read:list format with extension .vaulty", type=validate_file)
@@ -127,7 +127,6 @@ def query_path(method_type, path, **data):
     elif vault_response.status_code == 204:
         if method_type == "POST":
             print("Operation successful")
-            return json.loads(vault_response.content.decode('utf-8'))
         else:
             return vault_response.status_code
     elif vault_response.status_code == 500:
@@ -378,8 +377,8 @@ if __name__ == '__main__':
             post_secret(secrets, os.path.join(uri, args.write))
         else:
             if args.key and args.value:
-                list_key = args.key.split(",")
-                list_value = args.value.split(",")
+                list_key = args.key.split("|")
+                list_value = args.value.split("|")
                 for i in range(len(list_key)):
                     secrets[list_key[i]] = list_value[i]
             elif args.load:
