@@ -8,6 +8,7 @@ from sys import exit
 import configparser
 from tempfile import mkstemp
 from base64 import b64decode
+import subprocess
 
 requests.packages.urllib3.disable_warnings()
 
@@ -405,8 +406,8 @@ if __name__ == '__main__':
                 princ = value
 
         if os.path.exists(path):
-            result = subprocess.run(["kinit", "-kt", "{}".format(path), "{}".format(princ), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                universal_newlines=True])
+            result = subprocess.run(["kinit", "-kt", "{}".format(path), "{}".format(princ)], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                universal_newlines=True)
             if result.returncode == 0:
                 print("The keytab for {} has been tested succesfully".format(princ))
             else:
