@@ -397,24 +397,27 @@ if __name__ == '__main__':
     
     if args.kinit:
         secrets = read_secret(args.kinit)
-        for key, value in secrets['data'].items():
-            if key.endswith("keytab"):
-                fd, path = mkstemp()
-                with open(path, "wb") as keytab:
-                    keytab.write(b64decode(value))
-            elif key.endswith("principal"):
-                princ = value
-
-        if os.path.exists(path):
-            result = subprocess.run(["kinit", "-kt", "{}".format(path), "{}".format(princ)], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                universal_newlines=True)
-            if result.returncode == 0:
-                print("The keytab for {} has been tested succesfully".format(princ))
+        if secrets is not None:
+            for key, value in secrets['data'].items():
+                if key.endswith("keytab"):
+                    fd, path = mkstemp()
+                    with open(path, "wb") as keytab:
+                        keytab.write(b64decode(value))
+                elif key.endswith("principal"):
+                    princ = value
+    
+            if os.path.exists(path):
+                result = subprocess.run(["kinit", "-kt", "{}".format(path), "{}".format(princ)], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    universal_newlines=True)
+                if result.returncode == 0:
+                    print("The keytab for {} has been tested succesfully".format(princ))
+                else:
+                    print("The keytab for {} is invalid, please review data with vaulty -g {}".format(princ, args.kinit))
+                os.close(fd)
             else:
-                print("The keytab for {} is invalid, please review data with vaulty -g {}".format(princ, args.kinit))
-            os.close(fd)
+                print("keytab or principal key not found, please review data with vaulty -g {}".format(args.kinit))
         else:
-            print("keytab or principal key not found, please review data with vaulty -g {}".format(args.kinit))
+            print("Value " + args.get + " not found")
 
     if args.version:
         version()
