@@ -412,10 +412,10 @@ if __name__ == '__main__':
                 if result.returncode == 0:
                     print("The keytab for {} has been tested succesfully".format(princ))
                 else:
-                    print("The keytab for {} is invalid, please review data with vaulty -g {}".format(princ, args.kinit))
+                    print("The keytab for {} is invalid, please review data with vaulty-sup -g {}".format(princ, args.kinit))
                 os.close(fd)
             else:
-                print("keytab or principal key not found, please review data with vaulty -g {}".format(args.kinit))
+                print("keytab or principal key not found, please review data with vaulty-sup -g {}".format(args.kinit))
         else:
             print("Value " + args.kinit + " not found")
 
