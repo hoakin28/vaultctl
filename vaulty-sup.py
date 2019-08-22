@@ -417,7 +417,7 @@ if __name__ == '__main__':
             else:
                 print("keytab or principal key not found, please review data with vaulty -g {}".format(args.kinit))
         else:
-            print("Value " + args.get + " not found")
+            print("Value " + args.kinit + " not found")
 
     if args.version:
         version()
