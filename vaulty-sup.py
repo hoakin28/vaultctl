@@ -6,6 +6,9 @@ import json
 import os
 from sys import exit
 import configparser
+from tempfile import mkstemp
+from base64 import b64decode
+import subprocess
 
 requests.packages.urllib3.disable_warnings()
 
@@ -36,6 +39,7 @@ def read_args():
     #parser.add_argument("-c", "--copy" , help="Copy secrets, use --src and --dst", action='store_true')
     #parser.add_argument("--src", help="Source secret to copy if its a single secret must no end with /, if recursive end with /")
     #parser.add_argument("--dst", help="Dest path to copy secret if its a single secret must no end with /, if recursive end with /")
+    parser.add_argument("--kinit", help="Test if a valid keytab is found in the specified path", type=validate_secret)
     parser.add_argument("--version", help="Display Vaulty Version", action='store_true')
     return parser.parse_args()
 
@@ -390,6 +394,27 @@ if __name__ == '__main__':
 #                print("You need to use --key and --value or load a file")
 #                exit(1)
 #            post_secret(secrets, args.write)
+    
+    if args.kinit:
+        secrets = read_secret(args.kinit)
+        for key, value in secrets['data'].items():
+            if key.endswith("keytab"):
+                fd, path = mkstemp()
+                with open(path, "wb") as keytab:
+                    keytab.write(b64decode(value))
+            elif key.endswith("principal"):
+                princ = value
+
+        if os.path.exists(path):
+            result = subprocess.run(["kinit", "-kt", "{}".format(path), "{}".format(princ)], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                universal_newlines=True)
+            if result.returncode == 0:
+                print("The keytab for {} has been tested succesfully".format(princ))
+            else:
+                print("The keytab for {} is invalid, please review data with vaulty -g {}".format(princ, args.kinit))
+            os.close(fd)
+        else:
+            print("keytab or principal key not found, please review data with vaulty -g {}".format(args.kinit))
 
     if args.version:
         version()
