@@ -40,13 +40,13 @@ def read_args():
     return parser.parse_args()
 
 
-def validate_secret(arg, secret=re.compile(r"((?:^\w+\/?)(?:(?:\w+(?:[\.-]+)?\w+\/?)+)?(?:\w+$))")):
+def validate_secret(arg, secret=re.compile(r"((?:^\w)(?:\w[\.\/-]?)+(?:\w$))")):
     if not secret.match(arg):
         raise argparse.ArgumentTypeError("Invalid value, must not end or start with /, (cannot write secrets on mounts)")
     return arg
 
 
-def validate_path(arg, secret=re.compile(r"((?:^\w+\/?)(?:(?:\w+(?:[\.-]+)?\w+\/?)+)?(?:\/$))")):
+def validate_path(arg, secret=re.compile(r"((?:^\w)(?:\w[\.\/-]?)+(?:\w)(?:\/$))")):
     if not secret.match(arg):
         raise argparse.ArgumentTypeError("Invalid value, must not start with / and must end with /")
     return arg
