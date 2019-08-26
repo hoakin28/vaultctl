@@ -398,6 +398,11 @@ if __name__ == '__main__':
     if args.kinit:
         secrets = read_secret(args.kinit)
         if secrets is not None:
+            try:
+                os.mkdir('/tmp/0')
+            except FileExistsError:
+                continue
+
             for key, value in secrets['data'].items():
                 if key.endswith("keytab"):
                     fd, path = mkstemp()
