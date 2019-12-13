@@ -1,10 +1,10 @@
-# vaulty
+# vaultctl
 
 It's a wrapper around Vault's  REST API, it let you do multiple operations with ease and avoiding the cucumbersome cURL.
 
 The binary it's tested to work in CentOS7/RedHat7.5
 
-Operations supported by vaulty are:
+Operations supported by vaultctl are:
 
 - List Vault paths as list or trees
 - Print secrets
@@ -18,9 +18,9 @@ Operations supported by vaulty are:
 - Create new policies 
 - Load new policies from file
 
-The binary works out of the box, it only needs --url (Vault's URL with port, Example: https://localhost:8200/, --token (it needs root token or one with enough privileges to traverse Vault's tree), alternatively there's a configuration file, read from /etc/vaulty.conf 
+The binary works out of the box, it only needs --url (Vault's URL with port, Example: https://localhost:8200/, --token (it needs root token or one with enough privileges to traverse Vault's tree), alternatively there's a configuration file, read from /etc/vaultctl.conf 
 
-vaulty.conf
+vaultctl.conf
 
 \[client\]  
 host = https://localhost:8200/  
@@ -31,70 +31,70 @@ USAGE EXAMPLE
 
 List all the root mounts
  
-~# vaulty -s
+~# vaultctl -s
 
 List all secrets from a given path 
 
-~# vaulty -l path/
+~# vaultctl -l path/
 
-~# vaulty -t path/
+~# vaultctl -t path/
 
 Read a secret 
 
-~# vaulty -g path/to/secret
+~# vaultctl -g path/to/secret
 
 Search a secret with a keyword on all paths
 
-~# vaulty -f \<keyword\>
+~# vaultctl -f \<keyword\>
 
 Search a secret with a keyword on a given path
 
-~# vaulty -f \<keyword\> -p path/
+~# vaultctl -f \<keyword\> -p path/
 
 Create new secrets from command line
 
-~# vaulty -w path/to/secret --key name1|name2 --value foo|bar
+~# vaultctl -w path/to/secret --key name1|name2 --value foo|bar
 
 Copy one secret to a new path 
 
-~# vaulty -c --src path/to/secret --dst path/to/secret_copy 
+~# vaultctl -c --src path/to/secret --dst path/to/secret_copy 
 
 Copy recursively all secrets on certain path
 
-~# vaulty -c -r --src path/foo/ --dst path/bar/
+~# vaultctl -c -r --src path/foo/ --dst path/bar/
 
 Delete a secret
 
-~# vaulty -d path/to/secret
+~# vaultctl -d path/to/secret
 
 Delete all secrets on a given path
 
-~# vaulty -d path/ -r 
+~# vaultctl -d path/ -r 
 
 
 List all policies 
 
-~# vaulty --policy -s
+~# vaultctl --policy -s
 
 Read a policy 
 
-~# vaulty --policy -g policyName
+~# vaultctl --policy -g policyName
 
 Delete a policy 
 
-~# vaulty --policy -d policyName
+~# vaultctl --policy -d policyName
 
 Create a policy from command line 
 
-~# vaulty --policy -w policyName --rule /path/to/secret,/path/to/secrets/* --acl read,read:list
+~# vaultctl --policy -w policyName --rule /path/to/secret,/path/to/secrets/* --acl read,read:list
 
 Create a policy from file 
 
-~# vaulty --policy -w policyName --load policy.vaulty
+~# vaultctl --policy -w policyName --load policy.sec
  
 Create a secret from file 
 
-~# vaulty -w path/to/secret --load secret.vaulty
+~# vaultctl -w path/to/secret --load secret.sec
 
 
 File format for policies 
@@ -106,4 +106,4 @@ File format for secrets
 
 name:foo  
 lastname:bar  
-password:vaulty123 
+password:foobar123 
